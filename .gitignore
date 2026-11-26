@@ -1,0 +1,16 @@
+# Secrets: never upload these
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+
+# Built locally from the PDFs (the app rebuilds them automatically)
+db/
+data/processed/
+
+# Python and system clutter
+venv/
+.venv/
+__pycache__/
+*.pyc
+.DS_Store

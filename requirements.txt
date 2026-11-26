@@ -1,0 +1,8 @@
+anthropic
+chromadb
+streamlit
+pypdf
+python-dotenv
+pytest
+pandas
+openpyxl

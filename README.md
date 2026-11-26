@@ -2,7 +2,7 @@
 
 # ☀️ onHelio
 
-### Solar answers. Instantly. Every one with its source.
+### Where you will know your solar.
 
 An AI assistant that explains solar equipment, alerts and warranties in plain English, straight from official manufacturer documents.
 

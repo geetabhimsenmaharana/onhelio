@@ -143,13 +143,24 @@ if asked >= MAX_QUESTIONS:
 
 question = st.chat_input("Ask anything about your solar system", max_chars=MAX_QUESTION_CHARS)
 if question:
+    # Conversation memory: earlier messages go to Claude so follow-up questions make sense.
+    # Answers get their SEVERITY/CONFIDENCE header back so Claude keeps the same reply format.
+    history = []
+    for m in st.session_state.messages:
+        if m["role"] == "assistant":
+            content = (f"SEVERITY: {m.get('severity') or 'none'}\n"
+                       f"CONFIDENCE: {m.get('confidence') or 'medium'}\n{m['content']}")
+        else:
+            content = m["content"]
+        history.append({"role": m["role"], "content": content})
+
     st.session_state.messages.append({"role": "user", "content": question})
     with st.chat_message("user"):
         st.markdown(question)
 
     with st.chat_message("assistant"):
         with st.spinner("Searching documents..."):
-            raw_answer, excerpts = ask(question, role)
+            raw_answer, excerpts = ask(question, role, history)
         severity, confidence, answer = split_header(raw_answer)
         st.caption(f"Answering for: {role}")
         header = header_html(severity, confidence)

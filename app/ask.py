@@ -135,21 +135,47 @@ def search(question):
     return merged[:TOP_K * 2]
 
 
-def ask(question, role=DEFAULT_ROLE):
-    excerpts = search(question)
+MEMORY_TURNS = 3  # how many previous question+answer pairs Claude sees
+
+
+def recent_history(history):
+    """Keep the last few turns, starting with a user message (the API requires that)."""
+    trimmed = list(history or [])[-MEMORY_TURNS * 2:]
+    while trimmed and trimmed[0]["role"] != "user":
+        trimmed.pop(0)
+    # Drop a trailing unanswered question (e.g. after an error) so roles keep alternating
+    while trimmed and trimmed[-1]["role"] == "user":
+        trimmed.pop()
+    return trimmed
+
+
+def ask(question, role=DEFAULT_ROLE, history=None):
+    """Answer a question.
+
+    history: earlier messages in this chat, as [{"role": "user"|"assistant", "content": "..."}].
+    It lets follow-ups like "and the inverter?" make sense.
+    """
+    past = recent_history(history)
+
+    # Search with the previous question + this one, so follow-ups find the right pages
+    previous_questions = [m["content"] for m in past if m["role"] == "user"]
+    search_query = f"{previous_questions[-1]} {question}" if previous_questions else question
+    excerpts = search(search_query)
+
     system = f"{SYSTEM_PROMPT}\n\n{ROLE_GUIDE.get(role, ROLE_GUIDE[DEFAULT_ROLE])}"
     context = "\n\n".join(
         f"[{meta['source_file']}, page {meta['page']}]\n{doc}" for doc, meta in excerpts
     )
+    messages = past + [{
+        "role": "user",
+        "content": f"Document excerpts:\n\n{context}\n\nQuestion: {question}",
+    }]
     client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from .env
     response = client.messages.create(
         model=MODEL,
         max_tokens=800,
         system=system,
-        messages=[{
-            "role": "user",
-            "content": f"Document excerpts:\n\n{context}\n\nQuestion: {question}",
-        }],
+        messages=messages,
     )
     # The reply can contain several blocks (e.g. a "thinking" block first); keep only the text ones
     answer = "\n".join(block.text for block in response.content if block.type == "text").strip()

@@ -6,3 +6,8 @@ python-dotenv
 pytest
 pandas
 openpyxl
+
+# Evaluation (RAGAS 0.2 needs the matching LangChain 0.3 family)
+ragas>=0.2,<0.3
+langchain-community>=0.3,<0.4
+langchain-anthropic>=0.3,<1.0

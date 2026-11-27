@@ -16,13 +16,8 @@ MAX_QUESTION_CHARS = 500
 
 
 def greeting():
-    """Good morning / afternoon / evening, based on the computer's local time."""
-    hour = datetime.now().hour
-    if hour < 12:
-        return "Good morning"
-    if hour < 17:
-        return "Good afternoon"
-    return "Good evening"
+     
+    return "onHelio"
 
 # Badge look and meaning for each severity level
 BADGES = {

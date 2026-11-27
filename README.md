@@ -6,6 +6,10 @@
 
 An AI assistant that explains solar equipment, alerts and warranties in plain English, straight from official manufacturer documents.
 
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://onhelio.streamlit.app/)
+
+**Try it live:** [onhelio.streamlit.app](https://onhelio.streamlit.app/)
+
 </div>
 
 ---
@@ -67,7 +71,7 @@ Pick your role on the left side of the screen, and every answer adapts to you.
 
 ## How to use it
 
-1. Open onHelio.
+1. Open onHelio at [onhelio.streamlit.app](https://onhelio.streamlit.app/).
 2. Choose your role on the left, or keep **Solar Explorer**.
 3. Type your question, for example:
    - *What is a power optimizer?*

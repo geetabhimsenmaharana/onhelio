@@ -24,6 +24,20 @@ def extract_pdf(pdf_path):
     return pages
 
 
+def extract_text_file(path):
+    """Read a .md or .txt file. Each '## ' section becomes one 'page' so search stays precise."""
+    text = path.read_text(encoding="utf-8")
+    sections, current = [], []
+    for line in text.splitlines():
+        if line.startswith("## ") and current:
+            sections.append("\n".join(current).strip())
+            current = []
+        current.append(line)
+    if current:
+        sections.append("\n".join(current).strip())
+    return [{"page": n, "text": s} for n, s in enumerate(sections, start=1) if s]
+
+
 def main():
     config = pd.read_excel(CONFIG, sheet_name="config")
 
@@ -34,8 +48,9 @@ def main():
         out_folder.mkdir(parents=True, exist_ok=True)
         print(f"\n=== {name} ===")
 
-        for pdf in sorted(folder.glob("*.pdf")):
-            pages = extract_pdf(pdf)
+        files = sorted(list(folder.glob("*.pdf")) + list(folder.glob("*.md")) + list(folder.glob("*.txt")))
+        for pdf in files:
+            pages = extract_pdf(pdf) if pdf.suffix.lower() == ".pdf" else extract_text_file(pdf)
             record = {"manufacturer": name, "source_file": pdf.name, "pages": pages}
             out_file = out_folder / f"{pdf.stem}.json"
             out_file.write_text(json.dumps(record, indent=2, ensure_ascii=False))

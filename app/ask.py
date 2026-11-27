@@ -42,6 +42,7 @@ CONFIDENCE: high | medium | low
 - Severity: green = monitor, yellow = schedule a visit, red = act now, none = not about a fault.
 - Confidence: high = the excerpts state the answer directly; medium = the excerpts only partly cover it;
   low = the excerpts barely cover it.
+- If confidence is low, severity must be none (do not rate how serious something is without evidence).
 Do not mention severity or confidence anywhere else in the answer."""
 
 SEVERITIES = ("green", "yellow", "red", "none")
@@ -99,15 +100,17 @@ will with you your""".split())
 
 def keyword_score(question, text):
     """Score a chunk by exact word and phrase matches (good for alert names and error codes)."""
-    words = [w for w in "".join(c if c.isalnum() else " " for c in question.lower()).split()
-             if w not in STOPWORDS and len(w) > 2]
-    text = " ".join(text.lower().split())
+    tokens = "".join(c if c.isalnum() else " " for c in question.lower()).split()
+    words = [w for w in tokens if w not in STOPWORDS and len(w) > 2]
+    text = " ".join("".join(c if c.isalnum() else " " for c in text.lower()).split())
     score = sum(1 for w in set(words) if w in text)
-    # Bonus for two- and three-word phrases, e.g. "voltage mismatch", "module voltage mismatch"
-    for n in (2, 3):
-        for i in range(len(words) - n + 1):
-            if " ".join(words[i:i + n]) in text:
-                score += 3 * n
+    # Bonus for exact phrases from the original wording (small words kept), e.g.
+    # "voltage mismatch", "no communication with the site"; a phrase must contain a real word
+    for n in (2, 3, 4, 5):
+        for i in range(len(tokens) - n + 1):
+            phrase = tokens[i:i + n]
+            if any(w not in STOPWORDS and len(w) > 2 for w in phrase) and " ".join(phrase) in text:
+                score += 2 * n
     return score
 
 
@@ -127,7 +130,17 @@ def search(question):
         key=lambda item: keyword_score(question, item[1]),
         reverse=True,
     )
-    keyword_hits = [item for item in scored[:TOP_K] if keyword_score(question, item[1]) >= 6]
+    # Summary/index files (e.g. solaredge_alert_index.md) repeat alert names in several sections.
+    # Give them at most 1 keyword slot so the real manufacturer pages (with meanings and fixes) get the rest.
+    keyword_hits, index_used = [], 0
+    for item in scored:
+        if len(keyword_hits) >= TOP_K or keyword_score(question, item[1]) < 6:
+            break
+        if "_index" in item[2]["source_file"].lower():
+            if index_used >= 1:
+                continue
+            index_used += 1
+        keyword_hits.append(item)
 
     # 3) Keyword hits first (exact matches are most reliable), then meaning-based, no duplicates
     merged, seen = [], set()
@@ -139,6 +152,9 @@ def search(question):
 
 
 MEMORY_TURNS = 3  # how many previous question+answer pairs Claude sees
+# Room for Claude's reply. Some models think before writing, and thinking uses this budget too,
+# so it must be generous or long answers get cut off (or come back empty).
+MAX_TOKENS = 3000
 
 
 def recent_history(history):
@@ -176,13 +192,19 @@ def ask(question, role=DEFAULT_ROLE, history=None):
     client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from .env
     response = client.messages.create(
         model=MODEL,
-        max_tokens=800,
+        max_tokens=MAX_TOKENS,
         system=system,
         messages=messages,
     )
     # The reply can contain several blocks (e.g. a "thinking" block first); keep only the text ones
     answer = "\n".join(block.text for block in response.content if block.type == "text").strip()
-    return answer or "SEVERITY: none\nCONFIDENCE: low\nSorry, I couldn't produce an answer. Please try again.", excerpts
+    if not answer:
+        reason = ("The answer ran out of space. Try asking a shorter or more specific question."
+                  if response.stop_reason == "max_tokens" else "Please try again.")
+        answer = f"SEVERITY: none\nCONFIDENCE: low\nSorry, I couldn't produce an answer. {reason}"
+    elif response.stop_reason == "max_tokens":
+        answer += "\n\n*(The answer was cut off because it was too long. Ask a follow-up for the rest.)*"
+    return answer, excerpts
 
 
 def main():

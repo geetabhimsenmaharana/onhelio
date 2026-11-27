@@ -16,8 +16,13 @@ MAX_QUESTION_CHARS = 500
 
 
 def greeting():
-     
-    return "onHelio"
+    """Good morning / afternoon / evening, based on the computer's local time."""
+    hour = datetime.now().hour
+    if hour < 12:
+        return "Good morning"
+    if hour < 17:
+        return "Good afternoon"
+    return "Good evening"
 
 # Badge look and meaning for each severity level
 BADGES = {
@@ -136,7 +141,8 @@ if asked >= MAX_QUESTIONS:
             "Refresh the page later to start again.")
     st.stop()
 
-question = st.chat_input("Ask anything about your solar system", max_chars=MAX_QUESTION_CHARS)
+question = st.chat_input("Ask a question or paste an alert from your monitoring portal",
+                         max_chars=MAX_QUESTION_CHARS)
 if question:
     # Conversation memory: earlier messages go to Claude so follow-up questions make sense.
     # Answers get their SEVERITY/CONFIDENCE header back so Claude keeps the same reply format.

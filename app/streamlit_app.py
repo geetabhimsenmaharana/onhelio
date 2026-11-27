@@ -131,7 +131,8 @@ for message in st.session_state.messages:
 
 # Empty chat: centered greeting and tagline, like Claude's start screen
 if not st.session_state.messages:
-    st.markdown(f'<div class="oh-greeting">☀️ {greeting()}</div>', unsafe_allow_html=True)
+    st.markdown('<div class="oh-greeting">☀️ on<span class="oh-accent">Helio</span></div>',
+                unsafe_allow_html=True)
     st.markdown('<div class="oh-sub">Select your role on the left, then ask your question.</div>',
                 unsafe_allow_html=True)
 
